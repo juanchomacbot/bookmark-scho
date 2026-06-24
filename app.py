@@ -5,14 +5,30 @@ import unicodedata
 from pathlib import Path
 
 import fitz  # PyMuPDF
+import shinyswatch
 from shiny import App, reactive, render, ui
 
 # Read instructions once at startup so the UI stays static
 _INSTRUCTIONS_MD = Path("json_indications.md").read_text(encoding="utf-8")
 
+# Static assets (vendored Nunito Sans font, brand CSS, favicon) live in www/
+_WWW_DIR = Path(__file__).parent / "www"
+
 # --- UI Definition ---
 app_ui = ui.page_fluid(
-    ui.panel_title("Smart PDF Bookmark Injector"),
+    # "jut" brand layer: vendored font + accent palette over Bootswatch Lux.
+    ui.head_content(
+        ui.tags.link(rel="stylesheet", href="estilos-jut.css"),
+        ui.tags.link(rel="icon", type="image/svg+xml", href="icono-jut.svg"),
+    ),
+    ui.div(
+        ui.h2("Smart PDF Bookmark Injector"),
+        ui.div(
+            "Bake a Google Scholar outline into your PDF as real bookmarks.",
+            class_="jut-subtitle",
+        ),
+        class_="jut-header",
+    ),
     ui.navset_tab(
         ui.nav_panel(
             "Tool",
@@ -30,7 +46,9 @@ app_ui = ui.page_fluid(
                 accept=[".json", ".JSON"],
             ),
             ui.markdown(
-                "_JSON must be a list of objects with `title` (string) and `level` (integer) keys._"
+                "_JSON must be a list of objects with `title` (string) and `level` "
+                "(integer) keys. An optional `page` (integer, 1-based) lets the app "
+                "jump straight to the right page instead of searching the whole PDF._"
             ),
             ui.hr(),
             ui.h5("Options"),
@@ -74,6 +92,8 @@ app_ui = ui.page_fluid(
             ),
         ),
     ),
+    title="Smart PDF Bookmark Injector",
+    theme=shinyswatch.theme.lux,
 )
 
 
@@ -235,6 +255,12 @@ def _apply_smart_bookmarks(
     """
     Search each heading in outline_data within the PDF, build a bookmark list
     with exact page + Y-coordinate destinations, and save to output_pdf.
+
+    When an item carries a 1-based "page" hint (captured by the Scholar console
+    script), the search is scoped to that single page instead of scanning the
+    whole document. Items without a page hint use the legacy full-document scan,
+    so old {title, level} outlines keep working unchanged.
+
     Returns (log_messages, success).
     """
     messages: list[str] = []
@@ -253,8 +279,35 @@ def _apply_smart_bookmarks(
 
             # Truncate to 35 chars so long titles that wrap across lines still match
             search_query = title[:35]
-            matches: list[dict] = []
 
+            page_hint = item.get("page")
+            valid_hint = (
+                isinstance(page_hint, int)
+                and not isinstance(page_hint, bool)
+                and 1 <= page_hint <= len(doc)
+            )
+
+            # Tier 1 — fast path: confirm the heading on the page Scholar reported.
+            # A hit there is unambiguous (no printed-TOC false positive) and gives
+            # the exact Y, so we skip scanning the rest of the document.
+            if valid_hint:
+                y = _search_page(doc[page_hint - 1], search_query, margin_pt)
+                if y is not None:
+                    toc.append([
+                        level,
+                        title,
+                        page_hint,
+                        {"kind": fitz.LINK_GOTO, "to": fitz.Point(0, y)},
+                    ])
+                    messages.append(
+                        f"✅ Linked: '{search_query}...' → Page {page_hint} (page from outline)"
+                    )
+                    continue
+
+            # Tier 2 — legacy full-document scan. Also the path for outlines that
+            # carry no page hint. Proven behavior, so the page hint never regresses
+            # results (e.g. if Scholar's counter is a page label, not a page index).
+            matches: list[dict] = []
             for page_num in range(len(doc)):
                 y = _search_page(doc[page_num], search_query, margin_pt)
                 if y is not None:
@@ -269,7 +322,19 @@ def _apply_smart_bookmarks(
                     best["page"],
                     {"kind": fitz.LINK_GOTO, "to": fitz.Point(0, best["y"])},
                 ])
-                messages.append(f"✅ Linked: '{search_query}...' → Page {best['page']}")
+                messages.append(f"✅ Linked: '{search_query}...' → Page {best['page']} (searched)")
+            elif valid_hint:
+                # Tier 3 — heading text isn't selectable anywhere (e.g. rendered as
+                # an image). Trust the outline's page and land at the top of it.
+                toc.append([
+                    level,
+                    title,
+                    page_hint,
+                    {"kind": fitz.LINK_GOTO, "to": fitz.Point(0, margin_pt)},
+                ])
+                messages.append(
+                    f"✅ Linked: '{search_query}...' → Page {page_hint} (page from outline, top of page)"
+                )
             else:
                 messages.append(f"❌ Not found in PDF: '{title}'")
 
@@ -284,4 +349,4 @@ def _apply_smart_bookmarks(
         return messages, False
 
 
-app = App(app_ui, server)
+app = App(app_ui, server, static_assets=_WWW_DIR)
