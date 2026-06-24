@@ -7,12 +7,14 @@ A Shiny for Python web app that injects a precise, hierarchy-aware bookmark outl
 ## Features
 
 - Upload any PDF and a JSON outline — no scripting required.
+- **Page-aware fast path:** when the outline carries an optional 1-based `page` for a heading (captured by the Google Scholar console script), the app jumps straight to that page instead of scanning the whole PDF — faster and immune to printed-Table-of-Contents false positives.
 - Two-pass text search: exact match first, then a Unicode-normalized fallback that handles curly apostrophes, em dashes, ligatures, and other encoding mismatches between the JSON source and the PDF.
+- Graceful degradation: headings rendered as images (no selectable text) still land on the correct page via the outline's page hint; outlines with no page hint fall back to a full-document search that links to the last occurrence of the heading.
 - Configurable header/footer exclusion margin (in points) to prevent running page headers from hijacking bookmark targets.
-- TOC bypass: when a heading appears more than once (e.g. in a printed Table of Contents), the bookmark links to the last occurrence, which is always the real section body.
-- Per-heading processing log shown in the UI.
+- Per-heading processing log shown in the UI, distinguishing each match path.
 - One-click download of the bookmarked PDF.
 - Built-in "How to Get JSON" tab with instructions for extracting an outline from the Google Scholar PDF reader.
+- "jut" brand styling (Bootswatch Lux + Nunito Sans, vendored for offline use).
 
 ---
 
@@ -21,9 +23,13 @@ A Shiny for Python web app that injects a precise, hierarchy-aware bookmark outl
 ```
 .
 ├── app.py                  # Shiny app — UI, server logic, PDF processing
-├── json_indications.md     # Instructions displayed in the second app tab
+├── json_indications.md     # Instructions + console script, rendered in the "How to Get JSON" tab
+├── tests/                  # pytest suite (conftest builds tiny PDFs on the fly)
+├── www/                    # Brand assets: estilos-jut.css, icono-jut.svg, vendored fonts
 ├── requirements.txt        # Pinned runtime dependencies
-├── pyproject.toml          # Package metadata (Python >= 3.12.13)
+├── requirements-dev.txt    # Runtime deps + pytest
+├── pyproject.toml          # Package metadata (Python >= 3.12.13) + pytest config
+├── CLAUDE.md               # Guidance for Claude Code
 └── .venv/                  # Virtual environment (not committed)
 ```
 
@@ -42,7 +48,8 @@ source .venv/bin/activate      # macOS / Linux
 **2. Install dependencies**
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt          # runtime only
+pip install -r requirements-dev.txt      # adds pytest for development
 ```
 
 **3. Run the app**
@@ -53,28 +60,35 @@ shiny run app.py
 
 Then open `http://localhost:8000` in your browser.
 
+**4. Run the tests**
+
+```bash
+pytest
+```
+
 ---
 
 ## Usage
 
 ### Step 1 — Prepare the JSON outline
 
-The app expects a JSON file that is a list of objects, each with two keys:
+The app expects a JSON file that is a list of objects, each with the following keys:
 
-| Key | Type | Description |
-|---|---|---|
-| `title` | string | Exact heading text as it appears in the PDF |
-| `level` | integer | Hierarchy depth (1 = main heading, 2 = sub-heading, …) |
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | yes | Heading text as it appears in the PDF (the first 35 chars are used for the search query) |
+| `level` | integer | yes | Hierarchy depth (1 = main heading, 2 = sub-heading, …) |
+| `page` | integer | no | 1-based page the heading lives on; lets the app jump straight there instead of searching the whole PDF |
 
 ```json
 [
-    { "title": "1. Introduction", "level": 1 },
-    { "title": "1.1 Background",  "level": 2 },
-    { "title": "2. Methodology",  "level": 1 }
+    { "title": "1. Introduction", "level": 1, "page": 1 },
+    { "title": "1.1 Background",  "level": 2, "page": 2 },
+    { "title": "2. Methodology",  "level": 1, "page": 5 }
 ]
 ```
 
-See the **"How to Get JSON"** tab in the app for a step-by-step guide on extracting this outline automatically from the Google Scholar PDF reader using a browser console script.
+The `page` key is optional: outlines without it (e.g. older `{title, level}` files) still work via the full-document search, so nothing breaks. See the **"How to Get JSON"** tab in the app for a step-by-step guide on extracting this outline automatically from the Google Scholar PDF reader using a browser console script — that script captures the `page` for you.
 
 ### Step 2 — Upload and process
 
@@ -88,7 +102,13 @@ See the **"How to Get JSON"** tab in the app for a step-by-step guide on extract
 
 ## How the Search Works
 
-For each heading the app performs two passes per page:
+For each heading the app resolves a `(page, y-coordinate)` destination through up to three tiers:
+
+1. **Tier 1 — page-hint fast path.** If the item has a valid `page`, the app searches only that page (via `_search_page`). A hit there is unambiguous and gives the exact Y, so the rest of the document is skipped.
+2. **Tier 2 — full-document scan.** Used when there is no page hint, or the hinted page didn't match. Every page is searched and the **last** matching occurrence is chosen, which skips any printed Table-of-Contents entries and lands on the real section body.
+3. **Tier 3 — top-of-page fallback.** If the heading text isn't selectable anywhere (e.g. it's rendered as an image) but a valid `page` hint exists, the app trusts the hint and links to the top of that page.
+
+Within a page, `_search_page` itself runs two passes:
 
 1. **Exact search** — PyMuPDF's native `page.search_for()`. Fast and precise.
 2. **Normalized fallback** — If the exact search misses (e.g. the JSON has a curly apostrophe `ʼ` U+02BC but the PDF stores a right single quotation mark `'` U+2019), both strings are normalized before comparison:
@@ -104,7 +124,7 @@ Matches within the configured margin of the top or bottom page edge are discarde
 
 ## Limitations
 
-- **Scanned / image PDFs** — the script requires selectable text. Run OCR first (e.g. with `ocrmypdf`) if your PDF is image-only.
+- **Scanned / image PDFs** — text matching requires selectable text. With a `page` hint the bookmark still lands on the correct page (Tier 3), but to target the exact line, run OCR first (e.g. with `ocrmypdf`).
 - **Heavily fragmented text** — some PDF exporters split a single heading across many tiny text spans. If a heading consistently fails to match, try shortening the `title` value in your JSON to the first unambiguous words.
 
 ---
@@ -114,4 +134,6 @@ Matches within the configured margin of the top or bottom page edge are discarde
 | Package | Purpose |
 |---|---|
 | `shiny` | Web application framework |
+| `shinyswatch` | Bootswatch Lux theme for the "jut" brand styling |
 | `pymupdf` | PDF text search and bookmark injection (imported as `fitz`) |
+| `pytest` | Test runner (development only) |
