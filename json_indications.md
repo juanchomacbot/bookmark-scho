@@ -1,6 +1,33 @@
-# How to Extract a Google Scholar Outline as JSON
+# Instructions
 
-This guide explains how to extract the automatically generated outline from a PDF viewed in Google Scholar. The script captures each section's **title**, its heading **level**, and the **page** it lives on, then downloads a ready-to-use `outline.json`. Upload that file to the **Smart PDF Bookmark Injector** web app to bake the bookmarks directly into your local PDF file.
+The **Smart PDF Bookmark Injector** turns a Google Scholar outline into real,
+clickable bookmarks baked into your local PDF. This page walks you through the
+whole process, from extracting the outline to downloading the finished PDF.
+
+> 🎬 **Prefer to watch?** A short video demonstration is available here:
+> **[youtu.be/9tQK_rzlnx0](https://youtu.be/9tQK_rzlnx0)**
+
+## How it works (the big picture)
+
+The app needs two files: your **PDF** and a **JSON outline** that describes the
+section titles, their hierarchy level, and the page each one is on. You get the
+JSON from Google Scholar with a one-time browser script (Part A below), then
+upload both files here and click **Apply Bookmarks** (Part B). The output is the
+same PDF with a proper navigable bookmark tree.
+
+The whole flow is three stages:
+
+1. **Get the outline JSON** from the Google Scholar PDF reader (Part A).
+2. **Upload the PDF and the JSON** into the **Tool** tab (Part B).
+3. **Apply Bookmarks and download** the bookmarked PDF (Part B).
+
+---
+
+# Part A — Extract the outline as JSON
+
+This extracts the automatically generated outline from a PDF viewed in Google
+Scholar. The script captures each section's **title**, its heading **level**, and
+the **page** it lives on, then downloads a ready-to-use `outline.json`.
 
 ## Step 1: Open the PDF and Developer Tools
 
@@ -84,9 +111,8 @@ The script clicks through every outline entry to read which page each one lands 
 })();
 ```
 
-## Step 4: Upload the Downloaded File
-
-When the script finishes, your browser downloads a file named **`outline.json`** (check your Downloads folder). It looks like this:
+When the script finishes, your browser downloads a file named **`outline.json`**
+(check your Downloads folder). It looks like this:
 
 ```json
 [
@@ -105,4 +131,33 @@ When the script finishes, your browser downloads a file named **`outline.json`**
 
 The `page` field tells the app exactly which page each heading is on, so it jumps straight there instead of searching the whole PDF. (If the reader couldn't report a page for some entry, that entry simply omits `page` and the app falls back to searching for it — nothing breaks.)
 
-Go to the **Tool** tab, upload `outline.json` under **"2. Choose JSON outline file"**, and click **Apply Bookmarks**.
+---
+
+# Part B — Apply the bookmarks in this app
+
+Now switch to the **Tool** tab and use the sidebar on the left:
+
+## Step 4: Upload your two files
+
+1. Under **"1. Choose PDF file"**, select the same PDF you read in Google Scholar.
+2. Under **"2. Choose JSON outline file"**, select the `outline.json` you just downloaded.
+
+## Step 5: Adjust the option (optional)
+
+- **Header / footer exclusion margin (pt)** — matches found within this distance
+  from the top or bottom edge of each page are ignored, so running headers and
+  footers don't get picked up instead of the real heading. The default of **30**
+  works for most documents. Increase it if a header/footer is still being matched.
+
+## Step 6: Apply and download
+
+1. Click **Apply Bookmarks**. The **Processing Log** on the right shows each
+   heading as it is linked (`✅ Linked: ...`) or reported as not found
+   (`❌ Not found ...`), ending with a count of bookmarks applied.
+2. Click **Download Bookmarked PDF** to save the result. Open it in any PDF
+   reader and the bookmark panel will show your navigable outline.
+
+> **Tip:** If some headings show as "Not found", the title text in the JSON may
+> not match the selectable text in the PDF exactly. The app already handles
+> common Unicode differences (curly quotes, dashes, ligatures) and falls back to
+> the page hint when text can't be matched, so most entries still land correctly.

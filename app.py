@@ -106,7 +106,7 @@ app_ui = ui.page_fluid(
             ),
         ),
         ui.nav_panel(
-            "How to Get JSON",
+            "Instructions",
             ui.card(
                 ui.card_body(ui.markdown(_INSTRUCTIONS_MD)),
             ),
