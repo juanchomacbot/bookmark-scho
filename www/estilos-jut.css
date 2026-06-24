@@ -113,3 +113,32 @@ small,
   border: 1px solid #ececec;
   border-radius: 0.3rem;
 }
+
+/* ---- Footer: attribution + icon-only personal links ----------------------- */
+/* Mirrors the header rule: a teal top border closes the page, name on the
+   left of the icons. Icons inherit colour via currentColor and shift to teal
+   on hover. */
+.jut-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 0.8rem;
+  border-top: 3px solid var(--jut-teal);
+}
+.jut-footer-name {
+  color: var(--jut-help);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.jut-footer-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--jut-graphite);
+  transition: color 0.15s ease-in-out;
+}
+.jut-footer-link:hover,
+.jut-footer-link:focus {
+  color: var(--jut-teal);
+}

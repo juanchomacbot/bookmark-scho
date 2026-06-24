@@ -14,6 +14,26 @@ _INSTRUCTIONS_MD = Path("json_indications.md").read_text(encoding="utf-8")
 # Static assets (vendored Nunito Sans font, brand CSS, favicon) live in www/
 _WWW_DIR = Path(__file__).parent / "www"
 
+# Inline SVG icons for the footer links — vendored so they work offline
+# (no icon CDN). currentColor lets the CSS drive their colour on hover.
+_LINKEDIN_SVG = (
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" '
+    'aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04'
+    "-1.85 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.47-.9 1.64-1.85 "
+    "3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 "
+    "0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77"
+    'C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 '
+    '1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>'
+)
+_WEBSITE_SVG = (
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" '
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+    'stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10">'
+    '</circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 '
+    '15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 '
+    '4-10z"></path></svg>'
+)
+
 # --- UI Definition ---
 app_ui = ui.page_fluid(
     # "jut" brand layer: vendored font + accent palette over Bootswatch Lux.
@@ -91,6 +111,27 @@ app_ui = ui.page_fluid(
                 ui.card_body(ui.markdown(_INSTRUCTIONS_MD)),
             ),
         ),
+    ),
+    # Footer: attribution + icon-only personal links (offline inline SVGs).
+    ui.tags.footer(
+        ui.span("Juan Urteaga Tirado", class_="jut-footer-name"),
+        ui.a(
+            ui.HTML(_LINKEDIN_SVG),
+            href="https://www.linkedin.com/in/jnut/",
+            target="_blank",
+            rel="noopener noreferrer",
+            title="LinkedIn",
+            class_="jut-footer-link",
+        ),
+        ui.a(
+            ui.HTML(_WEBSITE_SVG),
+            href="https://jurteagat.github.io/",
+            target="_blank",
+            rel="noopener noreferrer",
+            title="Sitio web",
+            class_="jut-footer-link",
+        ),
+        class_="jut-footer",
     ),
     title="Smart PDF Bookmark Injector",
     theme=shinyswatch.theme.lux,

@@ -12,3 +12,4 @@ __pycache__/
 
 # folder ignore
 xyz_ignore/
+.gstack/
