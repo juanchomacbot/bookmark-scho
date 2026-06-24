@@ -1,0 +1,10 @@
+*.pyc
+*.pyo
+__pycache__/
+
+# Virtual environment
+.venv/
+
+# macOS metadata
+._*
+.DS_Store
