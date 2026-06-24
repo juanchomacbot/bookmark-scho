@@ -1,6 +1,7 @@
 *.pyc
 *.pyo
 __pycache__/
+.pytest_cache/
 
 # Virtual environment
 .venv/
@@ -8,3 +9,6 @@ __pycache__/
 # macOS metadata
 ._*
 .DS_Store
+
+# folder ignore
+xyz_ignore/

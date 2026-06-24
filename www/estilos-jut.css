@@ -1,0 +1,115 @@
+/* estilos-jut.css — "jut" visual style, adapted for this Shiny for Python tool.
+
+   Layers on top of Bootswatch Lux (applied in app.py via shinyswatch). Lux gives
+   the base look — white background, near-black primary, Nunito Sans, minimal
+   chrome. This file (1) vendors Nunito Sans so it works offline, and (2) applies
+   the jut accent palette + a compact, brand-flavoured header and tabs.
+
+   The source brand is dashboard-oriented; this is a small two-tab tool, so the
+   navbar / value-box / DataTables / Leaflet blocks from the original are dropped
+   and only the relevant pieces are kept. */
+
+/* ---- Nunito Sans (variable, OFL, vendored for offline use) ---------------- */
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("fonts/NunitoSans-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;          /* variable font: real weights in the browser */
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --jut-teal: #3D7E94;      /* petróleo — default accent / focus */
+  --jut-green: #4F8A57;     /* salvia — success */
+  --jut-dark: #1A1A1A;      /* near-black — primary / brand chrome */
+  --jut-ink: #222222;       /* body text */
+  --jut-graphite: #3A3A3A;  /* secondary text */
+  --jut-help: #777777;      /* help text */
+}
+
+/* Force the vendored family everywhere so the look holds without network. */
+body,
+.btn,
+.form-control,
+.card,
+.nav-link,
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Nunito Sans", Helvetica, Arial, sans-serif;
+}
+
+body {
+  color: var(--jut-ink);
+}
+
+/* ---- Brand header --------------------------------------------------------- */
+/* Echoes the dark, compact brand chrome of the dashboard: a near-black title
+   with a teal underline rule. Applied to the .jut-header wrapper in app.py. */
+.jut-header {
+  margin-bottom: 1.25rem;
+  border-bottom: 3px solid var(--jut-teal);
+  padding-bottom: 0.4rem;
+}
+.jut-header h2 {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--jut-dark);
+  margin: 0;
+}
+.jut-header .jut-subtitle {
+  color: var(--jut-help);
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
+}
+
+/* ---- Tabs: Lux-style uppercase, tightened (echoes the brand navbar) -------- */
+.nav-tabs .nav-link {
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--jut-graphite);
+}
+.nav-tabs .nav-link.active {
+  color: var(--jut-dark);
+  border-bottom: 2px solid var(--jut-teal);
+}
+
+/* ---- Section headings + card headers -------------------------------------- */
+.card-header {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--jut-dark);
+}
+h5 {
+  color: var(--jut-graphite);
+  font-weight: 700;
+}
+
+/* ---- Accent buttons ------------------------------------------------------- */
+/* "Apply Bookmarks" keeps Lux's near-black primary. "Download" → jut salvia.
+   Bootstrap 5 / Lux drive button colour through --bs-btn-* custom properties. */
+.btn-success {
+  --bs-btn-bg: var(--jut-green);
+  --bs-btn-border-color: var(--jut-green);
+  --bs-btn-hover-bg: #437848;
+  --bs-btn-hover-border-color: #437848;
+  --bs-btn-active-bg: #3b6a40;
+  --bs-btn-active-border-color: #3b6a40;
+}
+
+/* ---- Secondary / help text ------------------------------------------------ */
+.sidebar em,
+small,
+.text-muted {
+  color: var(--jut-help);
+}
+
+/* ---- Processing log ------------------------------------------------------- */
+/* Keep logs monospace, but tidy and on-brand. */
+#log_output {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  background: #fbfbfb;
+  border: 1px solid #ececec;
+  border-radius: 0.3rem;
+}
