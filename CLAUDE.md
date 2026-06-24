@@ -46,14 +46,19 @@ This is a single-file Shiny for Python web app (`app.py`) with no backend server
 **Data flow:**
 1. User uploads a PDF and a JSON outline file via the sidebar
 2. Clicking "Apply Bookmarks" triggers `_on_process()`, which calls `_apply_smart_bookmarks()`
-3. `_apply_smart_bookmarks()` iterates the outline, calls `_search_page()` per page per heading, collects `(level, title, page, y-coord)` tuples, and writes the TOC via PyMuPDF's `doc.set_toc()`
+3. `_apply_smart_bookmarks()` iterates the outline and resolves each heading to a `(page, y)` destination through up to three tiers (see below), appending `[level, title, page, {"kind": fitz.LINK_GOTO, "to": fitz.Point(0, y)}]` to the TOC list, then writes it via PyMuPDF's `doc.set_toc()`
 4. The processed PDF is written to a temp file; the reactive `_result_path` value is set so the download button can serve it
 
 **Two-pass text search (`_search_page`):**
 - Pass 1: PyMuPDF `page.search_for()` (exact, fast)
 - Pass 2: normalized block-text scan via `_normalize()` — handles Unicode mismatches (curly apostrophes, em dashes, ligatures) between the JSON source and the embedded PDF text
 
-**TOC bypass heuristic:** when a heading matches multiple pages (e.g., it appears in a printed Table of Contents), `_apply_smart_bookmarks` always picks `matches[-1]` — the last occurrence — which is the real section body.
+**Three-tier heading resolution (`_apply_smart_bookmarks`):**
+- **Tier 1 — page-hint fast path:** if the item has a valid 1-based `page`, search only that page; a hit gives the exact Y and skips the whole-document scan (and the `matches[-1]` heuristic).
+- **Tier 2 — legacy full-document scan:** used when there's no page hint, or Tier 1 missed. Scans every page and links to the last match.
+- **Tier 3 — top-of-page fallback:** heading text isn't selectable anywhere but a valid `page` hint exists → trust the hint and land at the top of that page (`y = margin_pt`).
+
+**TOC bypass heuristic (Tier 2 only):** when a heading matches multiple pages (e.g., it appears in a printed Table of Contents), the full-document scan always picks `matches[-1]` — the last occurrence — which is the real section body.
 
 **Margin exclusion:** matches within `margin_pt` of the top or bottom page edge are discarded so running headers/footers never win over the real heading. `margin_pt` is user-configurable via the sidebar `input_numeric` (default 30 pt).
 
